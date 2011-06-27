@@ -1,0 +1,158 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winresrc.h"
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+
+#ifdef APSTUDIO_INVOKED
+
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_FF_INFO, DIALOG
+    BEGIN
+        RIGHTMARGIN, 290
+        BOTTOMMARGIN, 363
+    END
+
+    IDD_FFMPEG_OPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 38
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_FF_INFO DIALOGEX 0, 0, 292, 365
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "AVI Information"
+FONT 8, "MS Shell Dlg", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,240,349,50,14
+    LTEXT           "Frame size, fps (µs per frame)",IDC_STATIC,15,81,92,8
+    LTEXT           "Length:",IDC_STATIC,15,91,25,8
+    LTEXT           "Min/avg/max/total key frame size:",IDC_STATIC,15,121,109,8
+    LTEXT           "Min/avg/max/total delta frame size:",IDC_STATIC,15,131,113,8
+    LTEXT           "Sampling rate:",IDC_STATIC,15,170,46,8
+    LTEXT           "Channels:",IDC_STATIC,15,180,32,8
+    LTEXT           "Sample precision:",IDC_STATIC,15,190,56,8
+    GROUPBOX        "Audio stream",IDC_STATIC,7,160,276,96
+    GROUPBOX        "Video stream",IDC_STATIC,7,71,276,88
+    LTEXT           "Length:",IDC_STATIC,15,220,25,8
+    LTEXT           "Min/avg/max/total frame size:",IDC_STATIC,15,230,100,8
+    LTEXT           "Decompressor:",IDC_STATIC,15,101,48,8
+    LTEXT           "Layout:",IDC_STATIC,15,210,24,8
+    RTEXT           "",IDC_VIDEO_FORMAT,142,81,133,10,SS_SUNKEN
+    RTEXT           "",IDC_VIDEO_NUMFRAMES,142,91,133,10,SS_SUNKEN
+    RTEXT           "",IDC_VIDEO_COMPRESSION,142,101,133,10,SS_SUNKEN
+    RTEXT           "",IDC_VIDEO_KEYFRAMESIZES,142,121,133,9,SS_SUNKEN
+    RTEXT           "",IDC_VIDEO_NONKEYFRAMESIZES,142,131,133,10,SS_SUNKEN
+    RTEXT           "",IDC_VIDEO_NUMKEYFRAMES,142,111,133,10,SS_SUNKEN
+    LTEXT           "Number of key frames:",IDC_STATIC,15,111,72,8
+    RTEXT           "",IDC_AUDIO_SAMPLINGRATE,142,170,133,10,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_CHANNELS,142,180,133,10,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_PRECISION,142,190,133,9,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_LAYOUT,142,210,133,10,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_LENGTH,142,220,133,10,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_FRAMESIZES,142,230,133,10,SS_SUNKEN
+    LTEXT           "Compression:",IDC_STATIC,15,200,43,8
+    RTEXT           "",IDC_AUDIO_COMPRESSION,142,200,133,10,SS_SUNKEN
+    RTEXT           "",IDC_VIDEO_DATARATE,142,141,133,10,SS_SUNKEN
+    LTEXT           "Data rate:",IDC_STATIC,15,141,32,8
+    LTEXT           "Data rate:",IDC_STATIC,15,240,100,8
+    RTEXT           "",IDC_AUDIO_DATARATE,142,240,133,10,SS_SUNKEN
+    LTEXT           "Name:",IDC_STATIC,15,14,46,8
+    LTEXT           "Duration:",IDC_STATIC,15,25,32,8
+    LTEXT           "Start time:",IDC_STATIC,15,34,35,8
+    GROUPBOX        "Format",IDC_STATIC,7,4,276,62
+    LTEXT           "Streams:",IDC_STATIC,15,54,35,8
+    RTEXT           "",IDC_AUDIO_SAMPLINGRATE2,143,14,133,10,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_CHANNELS2,143,25,133,10,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_PRECISION2,143,34,133,9,SS_SUNKEN
+    RTEXT           "",IDC_AUDIO_LAYOUT2,143,54,133,10,SS_SUNKEN
+    LTEXT           "Bitrate:",IDC_STATIC,15,44,43,8
+    RTEXT           "",IDC_AUDIO_COMPRESSION2,143,44,133,10,SS_SUNKEN
+END
+
+IDD_FFMPEG_OPTIONS DIALOGEX 0, 0, 186, 45
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Open options: FFMpeg"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,76,24,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,129,24,50,14
+    CONTROL         "Check1",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,16,39,10
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winresrc.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
