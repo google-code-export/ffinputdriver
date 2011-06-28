@@ -2,20 +2,21 @@ This is a FFmpeg Win32 shared build by Kyle Schwarz.
 
 Zeranoe's FFmpeg Builds Home Page: http://ffmpeg.zeranoe.com/builds/
 
-Built on May 23 2011 03:45:22
+Built on Jun 26 2011 22:52:03
 
-FFmpeg version git-01a73d6
-	libavutil    51.  2. 1 / 51.  2. 1
-	libavcodec   53.  6. 0 / 53.  6. 0
-	libavformat  53.  2. 0 / 53.  2. 0
-	libavdevice  53.  0. 0 / 53.  0. 0
-	libavfilter   2. 10. 0 /  2. 10. 0
-	libswscale    0. 14. 0 /  0. 14. 0
+FFmpeg version git-f211d9d
+	libavutil    51. 10. 0 / 51. 10. 0
+	libavcodec   53.  7. 0 / 53.  7. 0
+	libavformat  53.  4. 0 / 53.  4. 0
+	libavdevice  53.  1. 1 / 53.  1. 1
+	libavfilter   2. 24. 0 /  2. 24. 0
+	libswscale    2.  0. 0 /  2.  0. 0
 	libpostproc  51.  2. 0 / 51.  2. 0
 
 FFmpeg configured with:
 	--disable-static
 	--enable-shared
+	--disable-outdev=sdl
 	--enable-gpl
 	--enable-version3
 	--enable-memalign-hack
@@ -39,7 +40,6 @@ FFmpeg configured with:
 	--enable-libxavs
 	--enable-libxvid
 	--enable-zlib
-	--pkg-config=pkg-config
 
 The source code for this FFmpeg build can be found at:
 	http://hawkeye.arrozcru.org/source/
@@ -48,7 +48,7 @@ This version of FFmpeg was built on:
 	Ubuntu Desktop 11.04: http://www.ubuntu.com/desktop
 	
 The cross-compile toolchain used to compile this FFmpeg was:
-	MinGW-w64 r4161: http://mingw-w64.sourceforge.net/
+	MinGW-w64 r4186: http://mingw-w64.sourceforge.net/
 	winpthreads (part of MinGW-w64)
 
 The GCC version used to compile this FFmpeg was:
@@ -68,9 +68,9 @@ The external libaries compiled into this FFmpeg are:
 	Theora 1.1.1 http://www.theora.org/
 	Vorbis 1.3.2 http://www.vorbis.com/
 	libvpx 0.9.6 http://www.webmproject.org/code/
-	x264 git-b5a8ad7e http://www.videolan.org/developers/x264.html
+	x264 git-4c552d87 http://www.videolan.org/developers/x264.html
 	XAVS r51 http://xavs.sourceforge.net/
-	Xvid 1.3.1 http://www.xvid.org/
+	Xvid 1.3.2 http://www.xvid.org/
 	zlib 1.2.5 http://zlib.net/
 
 License for each library can be found in the licenses folder.
