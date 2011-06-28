@@ -1402,13 +1402,13 @@ uint32 VDFFAudioSource::decodeFramePacket( uint8_t  *&pBuffer, AVPacket* pPacket
 		uint8* pDstBuffer =  allocBuffer( sizeDecoded + sizeFrame ) + sizeDecoded;
 
 		if ( m_pCodecCtx->channels == m_pCodecCtx->request_channels )
-			memcpy( pDstBuffer, m_pFrameBuffer, sizeFrame );
+			memcpy( pDstBuffer, pSrcBuffer, sizeFrame );
 		else
 		switch( m_pCodecCtx->channel_layout )
 		{
 		case AV_CH_LAYOUT_MONO:
 		case AV_CH_LAYOUT_STEREO:
-			memcpy( pDstBuffer, m_pFrameBuffer, sizeFrame );
+			memcpy( pDstBuffer, pSrcBuffer, sizeFrame );
 			break;
 
 		case AV_CH_LAYOUT_5POINT0:

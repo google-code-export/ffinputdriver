@@ -173,7 +173,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
-      <DelayLoadDLLs>avcodec-53.dll;avformat-53.dll;avutil-51.dll;swscale-0.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-53.dll;avformat-53.dll;avutil-51.dll;swscale-2.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
