@@ -8,7 +8,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 extern const VDPluginInfo ff_plugin;
-extern const VDPluginInfo avi_plugin;
 
 const VDPluginInfo *const kPlugins[]={
 	&ff_plugin,
@@ -34,6 +33,9 @@ BOOLEAN WINAPI DllMain( IN HINSTANCE hDllHandle,
 	while( --strLen > 0 && strModulePath[strLen] != L'/' && strModulePath[strLen] != L'\\' );
 	
 	strModulePath[strLen + 1] = 0;
+
+	_tcscat(strModulePath, "ffdlls");
+
 
 	//  Perform global initialization.
 

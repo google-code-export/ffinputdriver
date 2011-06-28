@@ -16,15 +16,6 @@
 //		distribution.
 
 
-//TODO:
-//Known bugs:
-//			1)FIXED Uncompressed stream not loading (crash)
-//			2)FIXED Audio delay in cut avi file;
-//			3)FIXED Frame drop in no pts cases;
-//			4)FIXED ASSERT in some damaged audio streams
-
-//Version 0.21e
-
 #define __CONCAT1(x,y)  x ## y
 #define __CONCAT(x,y)   __CONCAT1(x,y)
 
@@ -35,6 +26,7 @@ extern "C" {
 
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
+#include <libavutil/pixdesc.h>
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 #include <libswscale/swscale.h>
@@ -56,10 +48,14 @@ extern "C" {
 
 #define INPUT_DRIVER_TAG  "[FFMpeg]"
 
+#define FFDRIVER_VERSION_MAJOR		0
+#define FFDRIVER_VERSION_MINOR		4
+#define FFDRIVER_VERSION_BUILD		101
+
 
 //Cut-off buffer from demuxer (mostly for not used audio streams);
 #define MAX_PACKETS_BUFFER_SIZE 512
-#define MAX_PACKETS_DELTA		5
+#define MAX_PACKETS_DELTA		50
 #define MAX_DESYNC_TIME			0.1 //(sec)
 
 
@@ -451,7 +447,17 @@ void VDFFVideoSource::invalidateBuffer( void )
 void VDFFVideoSource::notifySeek( int64 timestamp )
 {
 	m_posNext = ts2pos( timestamp ) + 1;
-	m_posCurrent = ts2pos( getPts( queryPacket() ) );
+	AVPacket *pPacket = queryPacket();
+	sint64 pts = getPts( pPacket );
+	if ( pPacket && pts != AV_NOPTS_VALUE )
+	{
+		m_posCurrent = ts2pos( pts );
+	}
+	else
+	{
+		m_posCurrent = ts2pos( timestamp ) - 1;
+	}
+	
 }
 
 
@@ -657,7 +663,7 @@ bool VDFFVideoSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint3
 		if ( pPacket == NULL ) break;
 
 		//Check if stream seek before key;
-		if ( bSkipToKey && pPacket->flags != AV_PKT_FLAG_KEY ) continue;
+	//	if ( bSkipToKey && pPacket->flags != AV_PKT_FLAG_KEY ) continue;
 		bSkipToKey = false;
 
 		avcodec_get_frame_defaults( pFrame );
@@ -1208,6 +1214,9 @@ int	VDFFAudioSource::initStream( IFFSource* pSource, int indexStream )
 			break;
 		}
 	}
+
+	if ( !m_pCodecCtx->sample_rate )
+		return -1;
 	
 	m_pFrameBuffer = (uint8*)av_malloc(AUDIO_FRAME_SIZE);
 	m_pReformatBuffer = (uint8*)av_malloc(AUDIO_FRAME_SIZE);
@@ -1871,34 +1880,34 @@ bool VDFFInputFile::seekFrame( IFFStream* pStream,  int64 timestamp, bool backwa
 		return false;
 	}
 
-	////Correct other streams
-	//for ( uint32 i = 0; i < m_streams.size(); ++i )
-	//{
-	//	if ( m_streams[i] )
-	//	{
-	//		sint64 pts = m_streams[i]->getPts(m_streams[i]->queryPacket());
-	//		sint64 reqTs = (sint64) (timestamp / (AV_TIME_BASE * av_q2d( m_pFormatCtx->streams[i]->time_base )) + 0.5 );
+	//Correct other streams
+	for ( uint32 i = 0; i < m_streams.size(); ++i )
+	{
+		if ( m_streams[i] )
+		{
+			sint64 pts = m_streams[i]->getPts(m_streams[i]->queryPacket());
+			sint64 reqTs = (sint64) (timestamp * timescale / ( av_q2d( m_pFormatCtx->streams[i]->time_base )) + 0.5 );
 
-	//		if ( reqTs < pts )
-	//		{
-	//			for ( uint32 j = 0; j < m_streams.size(); ++j )
-	//				if ( m_streams[j] )
-	//					m_streams[j]->invalidateBuffer( );
+			if ( reqTs < pts )
+			{
+				for ( uint32 j = 0; j < m_streams.size(); ++j )
+					if ( m_streams[j] )
+						m_streams[j]->invalidateBuffer( );
 
-	//			ret = av_seek_frame(m_pFormatCtx, i, reqTs, backward?AVSEEK_FLAG_BACKWARD:0 );
-	//			if (ret < 0) 
-	//			{
-	//				mContext.mpCallbacks->SetError("Error while seeking file: %s", m_pFormatCtx->filename);
-	//				return false;
-	//			}
-	//		}
-	//	}
-	//	
-	//}
+				ret = av_seek_frame(m_pFormatCtx, i, 2*reqTs - pts, backward?AVSEEK_FLAG_BACKWARD:0 );
+				if (ret < 0) 
+				{
+					mContext.mpCallbacks->SetError("Error while seeking file: %s", m_pFormatCtx->filename);
+					return false;
+				}
+			}
+		}
+		
+	}
 
 	for ( uint32 i = 0; i < m_streams.size(); ++i )
 		if ( m_streams[i] )
-			m_streams[i]->notifySeek( (int64)(timestamp * av_q2d( m_pFormatCtx->streams[pStream->getIndex()]->time_base ) /
+			m_streams[i]->notifySeek( (int64)(timestamp * timescale /
 			(av_q2d( m_pFormatCtx->streams[i]->time_base )) + 0.5 ) );
 
 
@@ -1908,8 +1917,205 @@ bool VDFFInputFile::seekFrame( IFFStream* pStream,  int64 timestamp, bool backwa
 
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+class VDFFInputFileInfoDialog : public VDXVideoFilterDialog {
+public:
+	bool Show(VDXHWND parent, VDFFInputFile* pInput);
+
+	virtual INT_PTR DlgProc(UINT msg, WPARAM wParam, LPARAM lParam);
+
+private:
+	VDFFInputFile*			m_pInputFile;
+
+};
+
+bool VDFFInputFileInfoDialog::Show(VDXHWND parent, VDFFInputFile* pInput)
+{
+	m_pInputFile = pInput;
+	bool ret = 0 != VDXVideoFilterDialog::Show(NULL, MAKEINTRESOURCE(IDD_FF_INFO), (HWND)parent);
+
+	return ret;
+}
+
+INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	AVFormatContext* pFormatCtx = m_pInputFile->getContext();
+	AVInputFormat* pInputFormat = pFormatCtx->iformat;
+	switch( msg ) 
+	{
+	case WM_INITDIALOG:
+		{
+			char buf[128];
+
+			//HWND hwnd = GetDlgItem(mhdlg, IDC_FORMATNAME);
+
+			SetDlgItemText(mhdlg, IDC_FORMATNAME, pInputFormat->long_name);
+
+			// convert the tick number into the number of seconds
+			double seconds =  pFormatCtx->duration/(double)AV_TIME_BASE;
+			int hours = (int)(seconds/3600);
+			seconds -= (hours * 3600);
+			int minutes = (int)(seconds/60);
+			seconds -= (minutes * 60);
+
+			//sprintf(buf, "%ld µs", pFormatCtx->duration);
+			sprintf(buf, "%d h : %d min : %.2f sec", hours, minutes,seconds);
+			SetDlgItemText(mhdlg, IDC_DURATION, buf);
+
+			sprintf(buf, "%.2f sec", pFormatCtx->start_time/(double)AV_TIME_BASE);
+			SetDlgItemText(mhdlg, IDC_STARTTIME, buf);
+
+			sprintf(buf, "%u kb/sec", pFormatCtx->bit_rate/1000);
+			SetDlgItemText(mhdlg, IDC_BITRATE, buf);
+
+			sprintf(buf, "%u", pFormatCtx->nb_streams);
+			SetDlgItemText(mhdlg, IDC_STREAMSCOUNT, buf);
+
+			AVCodecContext *pVideoCtx = NULL;
+			AVStream *pVideoStream = NULL;
+
+			for ( int i = 0; i < pFormatCtx->nb_streams; ++i )
+			{
+				if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
+				{
+					pVideoCtx = pFormatCtx->streams[i]->codec;
+					pVideoStream = pFormatCtx->streams[i];
+					break;
+				}
+			}
+
+			//VIDEO Stream
+
+			if ( pVideoStream && pVideoCtx )
+			{
+				AVCodec* pCodec = avcodec_find_decoder(pVideoCtx->codec_id);
+				const char *codec_name = "N/A";
+				if (pCodec) 
+				{
+					codec_name = pCodec->name;
+
+				} else if (pVideoCtx->codec_id == CODEC_ID_MPEG2TS)
+				{
+					codec_name = "mpeg2ts";
+				} else if (pVideoCtx->codec_name[0] != '\0') 
+				{
+					codec_name = pVideoCtx->codec_name;
+				}
+
+				SetDlgItemText(mhdlg, IDC_VIDEO_CODECNAME, codec_name);
+
+				if ( pVideoCtx->pix_fmt != PIX_FMT_NONE )
+				{
+					SetDlgItemText(mhdlg, IDC_VIDEO_PIXFMT, av_get_pix_fmt_name(pVideoCtx->pix_fmt));
+				}
+				else
+					SetDlgItemText(mhdlg, IDC_VIDEO_PIXFMT,"N/A");
+
+				sprintf(buf, "%u x %u", pVideoCtx->width, pVideoCtx->height);
+				SetDlgItemText(mhdlg, IDC_VIDEO_WXH, buf);
+
+				sprintf(buf, "%.2f fps", pVideoStream->r_frame_rate.num/(double)pVideoStream->r_frame_rate.den);
+				SetDlgItemText(mhdlg, IDC_VIDEO_FRAMERATE, buf);
+
+				if ( pVideoCtx->bit_rate )
+				{
+					sprintf(buf, "%u kb/sec", pVideoCtx->bit_rate/1000);
+					SetDlgItemText(mhdlg, IDC_VIDEO_BITRATE, buf);
+
+				}
+				else
+					SetDlgItemText(mhdlg, IDC_VIDEO_BITRATE, "N/A");
+				
+
+
+			}
+
+			AVCodecContext *pAudioCtx = NULL;
+			AVStream *pAudioStream = NULL;
+
+			for ( int i = 0; i < pFormatCtx->nb_streams; ++i )
+			{
+				if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO )
+				{
+					pAudioCtx = pFormatCtx->streams[i]->codec;
+					pAudioStream = pFormatCtx->streams[i];
+					break;
+				}
+			}
+
+			//AUDIO Stream
+
+			if ( pAudioStream && pAudioCtx )
+			{
+				AVCodec* pCodec = avcodec_find_decoder(pAudioCtx->codec_id);
+				const char *codec_name = "N/A";
+				if (pCodec) 
+				{
+					codec_name = pCodec->name;
+
+				} else if (pVideoCtx->codec_name[0] != '\0') 
+				{
+					codec_name = pAudioCtx->codec_name;
+				}
+
+				SetDlgItemText(mhdlg, IDC_AUDIO_CODECNAME, codec_name);
+
+				sprintf(buf, "%u Hz", pAudioCtx->sample_rate);
+				SetDlgItemText(mhdlg, IDC_AUDIO_SAMPLERATE, buf);
+
+				sprintf(buf, "%u", pAudioCtx->channels);
+				SetDlgItemText(mhdlg, IDC_AUDIO_CHANNELS, buf);
+
+				if (pAudioCtx->sample_fmt != AV_SAMPLE_FMT_NONE) 
+				{
+					SetDlgItemText(mhdlg, IDC_AUDIO_SAMPLEFMT, av_get_sample_fmt_name(pAudioCtx->sample_fmt));
+					
+				}
+				else 
+					SetDlgItemText(mhdlg, IDC_AUDIO_SAMPLEFMT, "N/A");
+
+				av_get_channel_layout_string(buf, 128, pAudioCtx->channels, pAudioCtx->channel_layout);
+				SetDlgItemText(mhdlg, IDC_AUDIO_LAYOUT, buf);
+
+			
+				int bits_per_sample = av_get_bits_per_sample(pAudioCtx->codec_id);
+				int bit_rate = bits_per_sample ? pAudioCtx->sample_rate * pAudioCtx->channels * bits_per_sample : pAudioCtx->bit_rate;
+				if ( bit_rate )
+				{
+					sprintf(buf, "%u kb/sec", bit_rate/1000);
+					SetDlgItemText(mhdlg, IDC_AUDIO_BITRATE, buf);
+
+				}
+				else
+					SetDlgItemText(mhdlg, IDC_AUDIO_BITRATE, "N/A");
+
+			}
+
+		}
+		return TRUE;
+
+	case WM_COMMAND:
+		switch(LOWORD(wParam))
+		{
+			
+			case IDOK:
+				
+				EndDialog(mhdlg, TRUE);
+				return TRUE;
+
+			case IDCANCEL:
+				EndDialog(mhdlg, FALSE);
+				return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
+
 
 class VDFFInputFileOptionsDialog : public VDXVideoFilterDialog {
 public:
@@ -1996,7 +2202,8 @@ bool VDFFInputFile::CreateOptions(const void *buf, uint32 len, IVDXInputOptions 
 
 void VDFFInputFile::DisplayInfo(VDXHWND hwndParent) 
 {
-	//TODO: implement info
+	VDFFInputFileInfoDialog dlg;
+	dlg.Show(hwndParent, this);
 }
 
 bool VDFFInputFile::GetVideoSource(int index, IVDXVideoSource **ppVS) 
@@ -2047,6 +2254,8 @@ bool VDFFInputFile::GetAudioSource(int index, IVDXAudioSource **ppAS)
 	pAS->AddRef();
 	return true;
 }
+
+
 
 
 
@@ -2112,10 +2321,10 @@ const VDXInputDriverDefinition ff_input={
 	0,
 	sizeof ff_sig,
 	ff_sig,
-	L"*.anm|*.asf|*.avi|*.avs|*.bik|*.dts|*.dxa|*.flv|*.fli|*.flc|*.flx|*.h261"
+	L"*.anm|*.asf|*.avi|*.bik|*.dts|*.dxa|*.flv|*.fli|*.flc|*.flx|*.h261"
 	L"|*.h263|*.h264|*.m4v|*.mkv|*.mjp|*.mlp|*.mov|*.mp4|*.3gp|*.3g2|*.mj2|*.mvi|*.ts|*.vob"
 	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv",
-	L"FFMpeg Supported Files |*.anm;*.asf;*.avi;*.avs;*.bik;*.dts;*.dxa;"
+	L"FFMpeg Supported Files |*.anm;*.asf;*.avi;*.bik;*.dts;*.dxa;"
 	L"*.flv;*.fli;*.flc;*.flx;*.h261;*.h263;*.h264;*.m4v;*.mkv;*.mjp;*.mlp;"
 	L"*.mov;*.mp4;*.3gp;*.3g2;*.mj2;*.mvi;*.pmp;*.rm;*.rmvb;*.rpl;*.smk;*.swf;*.vc1;*.wmv;*.ts;*.vob",
 	L"ffmpeg",
@@ -2127,7 +2336,7 @@ extern const VDXPluginInfo ff_plugin={
 	L"FFMpeg",
 	L"Andrey Kovalchuk",
 	L"Loads and decode files through ffmpeg libs.",
-	0x01000000,
+	(FFDRIVER_VERSION_MAJOR<<24) + (FFDRIVER_VERSION_MINOR<<16) + FFDRIVER_VERSION_BUILD,
 	kVDXPluginType_Input,
 	0,
 	kVDXPlugin_APIVersion,
