@@ -1978,7 +1978,7 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			AVCodecContext *pVideoCtx = NULL;
 			AVStream *pVideoStream = NULL;
 
-			for ( int i = 0; i < pFormatCtx->nb_streams; ++i )
+			for ( uint32 i = 0; i < pFormatCtx->nb_streams; ++i )
 			{
 				if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
 				{
@@ -2037,7 +2037,7 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			AVCodecContext *pAudioCtx = NULL;
 			AVStream *pAudioStream = NULL;
 
-			for ( int i = 0; i < pFormatCtx->nb_streams; ++i )
+			for ( uint32 i = 0; i < pFormatCtx->nb_streams; ++i )
 			{
 				if ( pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO )
 				{
