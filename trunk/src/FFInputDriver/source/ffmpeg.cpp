@@ -276,7 +276,7 @@ public:
 
 	sint64		getPts(  AVPacket* pPacket );
 
-	uint32		prepareFrameBuffer( AVFrame* pFrame, int format, void* pFrameBuffer );
+	uint32		prepareFrameBuffer( AVPicture* p, int format, void* pFrameBuffer );
 	bool		decodeFramePacket( AVFrame* pFrame, AVPacket* pPacket );
 	int64		guessPts( AVPacket* pPacket );
 
@@ -439,6 +439,11 @@ int VDFFVideoSource::initStream( IFFSource* pSource, int streamIndex )
 	m_posCurrent = 0;
 	m_posNext = m_posCurrent;
 
+	m_bStreamSeeked = true;
+	//Load first frame;
+	uint32 cnt, bytes;
+	this->Read( 0, 1, NULL, 0, &bytes, &cnt );
+
 	return result;
 }
 
@@ -488,9 +493,9 @@ bool	VDFFVideoSource::decodeFramePacket(  AVFrame* pFrame, AVPacket* pPacket )
 }
 
 //Experimental
-uint32 VDFFVideoSource::prepareFrameBuffer( AVFrame* pFrame, int format, void* pFrameBuffer )
+uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFrameBuffer )
 {
-	if ( pFrame ==NULL || pFrame->data[0] == NULL )
+	if ( p ==NULL || p->data[0] == NULL )
 		return 0;
 
 	uint8_t *pBuffer = (uint8_t *)pFrameBuffer;//mpFrameBuffer;
@@ -498,7 +503,7 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVFrame* pFrame, int format, void* p
 	int w = m_pCodecCtx->width;
 	int h = m_pCodecCtx->height;
 
-	AVPicture* pPicture = (AVPicture*)pFrame;
+	AVPicture* pPicture = p;
 
 	uint8_t* dstData[4] = {NULL, NULL, NULL, NULL};
 	int		dstStride[4] = {0, 0, 0, 0};
@@ -682,12 +687,19 @@ bool VDFFVideoSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint3
 			bGotFrame = true;
 			m_posCurrent = m_posNext;
 
-			uint32 size = prepareFrameBuffer( pFrame, m_pixmap.format, NULL );
+			/*uint32 size = prepareFrameBuffer( pFrame, m_pixmap.format, NULL );
 			if ( !m_bStreamSeeked )
 				m_currentBuffer = m_nextBuffer;
 			m_nextBuffer.resize( size );
-			prepareFrameBuffer( pFrame, m_pixmap.format, &m_nextBuffer[0] );
-			
+			prepareFrameBuffer( pFrame, m_pixmap.format, &m_nextBuffer[0] );*/
+
+			uint32 size = avpicture_get_size( m_pCodecCtx->pix_fmt, m_pCodecCtx->width, m_pCodecCtx->height );
+			if ( !m_bStreamSeeked )
+				m_currentBuffer = m_nextBuffer;
+			m_nextBuffer.resize( size );
+			avpicture_layout( (AVPicture*)pFrame, m_pCodecCtx->pix_fmt, m_pCodecCtx->width, m_pCodecCtx->height,
+				&m_nextBuffer[0], m_nextBuffer.size());
+						
 			if ( m_bStreamSeeked )
 			{
 				m_posCurrent = lStart64;
@@ -858,12 +870,12 @@ void VDFFVideoSource::Reset()
 {
 	m_posDesired = -1;
 
-	if ( m_avframe.data[0] == NULL )
-	{
-		//Load first frame;
-		uint32 cnt, bytes;
-		this->Read( 0, 1, NULL, 0, &bytes, &cnt );
-	}
+	//if ( m_avframe.data[0] == NULL )
+	//{
+	//	//Load first frame;
+	//	uint32 cnt, bytes;
+	//	this->Read( 0, 1, NULL, 0, &bytes, &cnt );
+	//}
 
 	/*if ( m_fmtBuffer != m_pixmap.format )
 	{
@@ -907,17 +919,25 @@ int VDFFVideoSource::GetRequiredCount()
 const void *VDFFVideoSource::DecodeFrame(const void *inputBuffer, uint32 data_len, bool is_preroll, sint64 streamFrame, sint64 targetFrame) 
 {
 	//Check for dummy
-	uint8 *pBuffer = &m_frameBuffer[0];
+	uint8 *pOutBuffer = &m_frameBuffer[0];
+	uint8 *pInBuffer = &m_currentBuffer[0];
 
-	if ( data_len > 1 )
+	if ( inputBuffer && data_len > 0 )
 	{
-		memcpy( pBuffer, inputBuffer, data_len );
-		m_fmtBuffer = m_pixmap.format;
+		pInBuffer = (uint8_t*)inputBuffer;
 	}
 
+	AVPicture avpicture, *pPicture = &avpicture;
+
+	avpicture_fill( pPicture, pInBuffer, 
+		m_pCodecCtx->pix_fmt, m_pCodecCtx->width, m_pCodecCtx->height );
+
+	prepareFrameBuffer( pPicture, m_pixmap.format, pOutBuffer );
+
 	m_posDecode = streamFrame;
+
+	return pOutBuffer;
 	
-	return &m_frameBuffer[0];
 }
 
 uint32 VDFFVideoSource::GetDecodePadding() 
@@ -933,11 +953,7 @@ bool VDFFVideoSource::IsFrameBufferValid()
 
 const VDXPixmap& VDFFVideoSource::GetFrameBuffer()
 {
-	if ( m_fmtBuffer != m_pixmap.format )
-	{
-		prepareFrameBuffer( &m_avframe, m_pixmap.format, &m_frameBuffer[0] );
-		m_fmtBuffer = m_pixmap.format;
-	}
+	
 	return m_pixmap;
 }
 
@@ -1105,11 +1121,7 @@ bool VDFFVideoSource::SetDecompressedFormat(const VDXBITMAPINFOHEADER *pbih)
 
 const void *VDFFVideoSource::GetFrameBufferBase()
 {
-	if ( m_fmtBuffer != m_pixmap.format )
-	{
-		prepareFrameBuffer( &m_avframe, m_pixmap.format, &m_frameBuffer[0] );
-		m_fmtBuffer = m_pixmap.format;
-	}
+	
 	return &m_frameBuffer[0];
 }
 
@@ -1337,6 +1349,11 @@ int	VDFFAudioSource::initStream( IFFSource* pSource, int indexStream )
 	m_pStreamCtx = m_pFormatCtx->streams[getIndex()];
 	m_pCodecCtx = m_pStreamCtx->codec;
 
+	//WORKAROUND BUG (0.8): 
+	int channels = m_pCodecCtx->channels;
+	int sample_rate = m_pCodecCtx->sample_rate;
+	int frame_size = m_pCodecCtx->frame_size;
+
 	if (m_pCodecCtx->channels > 0) {
 		m_pCodecCtx->request_channels = FFMIN(2, m_pCodecCtx->channels);
 	} else {
@@ -1350,9 +1367,19 @@ int	VDFFAudioSource::initStream( IFFSource* pSource, int indexStream )
 		return -1; // Codec not found
 
 	// Open codec
-	if(avcodec_open(m_pCodecCtx, pDecoder)<0)
-		return -1;
+	if ( m_pCodecCtx->codec != pDecoder )
+		if(avcodec_open(m_pCodecCtx, pDecoder)<0)
+			return -1;
 
+	if ( m_pCodecCtx->channels <= 0 )
+		m_pCodecCtx->channels = channels;
+
+	if ( m_pCodecCtx->frame_size <= 0 )
+		m_pCodecCtx->frame_size = frame_size;
+
+	if ( m_pCodecCtx->sample_rate <= 0 )
+		m_pCodecCtx->sample_rate = sample_rate;
+	
 	if ( m_pCodecCtx->request_channels < m_pCodecCtx->channels )
 	{
 		switch( m_pCodecCtx->channel_layout )
