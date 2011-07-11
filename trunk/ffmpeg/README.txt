@@ -2,14 +2,14 @@ This is a FFmpeg Win32 shared build by Kyle Schwarz.
 
 Zeranoe's FFmpeg Builds Home Page: http://ffmpeg.zeranoe.com/builds/
 
-Built on Jun 26 2011 22:52:03
+Built on Jul  4 2011 21:42:13
 
-FFmpeg version git-f211d9d
-	libavutil    51. 10. 0 / 51. 10. 0
+FFmpeg version git-5d4fd1d
+	libavutil    51. 11. 0 / 51. 11. 0
 	libavcodec   53.  7. 0 / 53.  7. 0
-	libavformat  53.  4. 0 / 53.  4. 0
-	libavdevice  53.  1. 1 / 53.  1. 1
-	libavfilter   2. 24. 0 /  2. 24. 0
+	libavformat  53.  5. 0 / 53.  5. 0
+	libavdevice  53.  2. 0 / 53.  2. 0
+	libavfilter   2. 24. 3 /  2. 24. 3
 	libswscale    2.  0. 0 /  2.  0. 0
 	libpostproc  51.  2. 0 / 51.  2. 0
 
@@ -48,11 +48,11 @@ This version of FFmpeg was built on:
 	Ubuntu Desktop 11.04: http://www.ubuntu.com/desktop
 	
 The cross-compile toolchain used to compile this FFmpeg was:
-	MinGW-w64 r4186: http://mingw-w64.sourceforge.net/
+	MinGW-w64 r4240: http://mingw-w64.sourceforge.net/
 	winpthreads (part of MinGW-w64)
 
 The GCC version used to compile this FFmpeg was:
-	GCC 4.5.3: http://gcc.gnu.org/
+	GCC 4.6.1: http://gcc.gnu.org/
 	
 The external libaries compiled into this FFmpeg are:
 	bzip2 1.0.6 http://www.bzip.org
