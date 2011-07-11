@@ -52,8 +52,8 @@ extern "C" {
 #define INPUT_DRIVER_TAG  "[FFMpeg]"
 
 #define FFDRIVER_VERSION_MAJOR		0
-#define FFDRIVER_VERSION_MINOR		4
-#define FFDRIVER_VERSION_BUILD		101
+#define FFDRIVER_VERSION_MINOR		5
+#define FFDRIVER_VERSION_BUILD		116
 
 
 //Cut-off buffer from demuxer (mostly for not used audio streams);
@@ -2507,10 +2507,11 @@ const VDXInputDriverDefinition ff_input={
 	ff_sig,
 	L"*.anm|*.asf|*.avi|*.bik|*.dts|*.dxa|*.flv|*.fli|*.flc|*.flx|*.h261"
 	L"|*.h263|*.h264|*.m4v|*.mkv|*.mjp|*.mlp|*.mov|*.mp4|*.3gp|*.3g2|*.mj2|*.mvi|*.ts|*.vob"
-	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv",
+	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t",
 	L"FFMpeg Supported Files |*.anm;*.asf;*.avi;*.bik;*.dts;*.dxa;"
 	L"*.flv;*.fli;*.flc;*.flx;*.h261;*.h263;*.h264;*.m4v;*.mkv;*.mjp;*.mlp;"
-	L"*.mov;*.mp4;*.3gp;*.3g2;*.mj2;*.mvi;*.pmp;*.rm;*.rmvb;*.rpl;*.smk;*.swf;*.vc1;*.wmv;*.ts;*.vob",
+	L"*.mov;*.mp4;*.3gp;*.3g2;*.mj2;*.mvi;*.pmp;*.rm;*.rmvb;*.rpl;*.smk;*.swf;*.vc1;*.wmv;"
+	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t",
 	L"ffmpeg",
 	ff_create
 };
