@@ -301,6 +301,8 @@ private:
 	//Buffers of two sequenced frames;  
 	std::vector<uint8>				m_currentBuffer;
 	std::vector<uint8>				m_nextBuffer;
+	AVFrame							m_avframe;
+	int								m_fmtBuffer;
 
 	sint64							m_posDecode;
 	bool							m_bResetDecoder;
@@ -331,6 +333,7 @@ VDFFStreamBase( AVMEDIA_TYPE_VIDEO ),
 	m_posNext(-1),
 	m_tsStart( 0 ),
 	m_bStreamSeeked(false),
+	m_fmtBuffer( 0 ),
 	mContext(context)
 {
 
@@ -424,6 +427,8 @@ int VDFFVideoSource::initStream( IFFSource* pSource, int streamIndex )
 
 	m_currentBuffer.resize(1);
 	m_nextBuffer.resize(1);
+
+	avcodec_get_frame_defaults( &m_avframe );
 
 	m_posDelta = MAX_PACKETS_DELTA;
 	m_posDesync = ts2pos( (sint64)(MAX_DESYNC_TIME / av_q2d( m_pStreamCtx->time_base )) );
@@ -524,19 +529,20 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVFrame* pFrame, int format, void* p
 	case nsVDXPixmap::kPixFormat_Y8:
 		{
 			dstData[0] = pBuffer;					dstStride[0] = w;
-			dstData[1] = 0;			dstStride[1] = 0;
-			dstData[2] = 0;				dstStride[2] = 0;
+			dstData[1] = dstData[0] + w*h;			dstStride[1] = w >> 1;
+			dstData[2] = dstData[1];				dstStride[2] = w >> 1;
 
-			size = w*h;
+			size = w*h ;
 			if ( pBuffer == NULL ) break;
 
 			m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
 				m_pCodecCtx->pix_fmt,
-				w, h, PIX_FMT_YUV420P, SWS_FAST_BILINEAR,
+				w, h, PIX_FMT_YUV420P, SWS_BICUBIC,
 				NULL, NULL, NULL);
 
 			sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
 				m_pCodecCtx->height, dstData, dstStride);
+
 		
 		}
 		break;
@@ -579,7 +585,7 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVFrame* pFrame, int format, void* p
 
 		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_BGR555, SWS_BICUBIC,
+			w, h, PIX_FMT_RGB555, SWS_BICUBIC,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -593,7 +599,7 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVFrame* pFrame, int format, void* p
 
 		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_BGR565, SWS_BICUBIC,
+			w, h, PIX_FMT_RGB565, SWS_BICUBIC,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -642,7 +648,7 @@ void VDXAPIENTRY VDFFVideoSource::GetStreamSourceInfo(VDXStreamSourceInfo& srcIn
 
 bool VDFFVideoSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint32 cbBuffer, uint32 *lBytesRead, uint32 *lSamplesRead) 
 {
-	AVFrame frame, *pFrame = &frame;
+	AVFrame *pFrame = &m_avframe;
 
 	int64 hiTs = this->pos2ts( lStart64 );
 		
@@ -851,7 +857,19 @@ sint64 VDFFVideoSource::GetSampleBytePosition(sint64 sample_num) {
 void VDFFVideoSource::Reset()
 {
 	m_posDesired = -1;
-	//invalidateBuffer();
+
+	if ( m_avframe.data[0] == NULL )
+	{
+		//Load first frame;
+		uint32 cnt, bytes;
+		this->Read( 0, 1, NULL, 0, &bytes, &cnt );
+	}
+
+	/*if ( m_fmtBuffer != m_pixmap.format )
+	{
+		prepareFrameBuffer( &m_avframe, m_pixmap.format, &m_frameBuffer[0] );
+		m_fmtBuffer = m_pixmap.format;
+	}*/
 }
 
 void VDFFVideoSource::SetDesiredFrame(sint64 frame_num)
@@ -894,6 +912,7 @@ const void *VDFFVideoSource::DecodeFrame(const void *inputBuffer, uint32 data_le
 	if ( data_len > 1 )
 	{
 		memcpy( pBuffer, inputBuffer, data_len );
+		m_fmtBuffer = m_pixmap.format;
 	}
 
 	m_posDecode = streamFrame;
@@ -909,42 +928,172 @@ uint32 VDFFVideoSource::GetDecodePadding()
 
 bool VDFFVideoSource::IsFrameBufferValid()
 {
-	return m_posDecode >= 0;
+	return ((m_posDecode >= 0) && ( m_fmtBuffer == m_pixmap.format));
 }
 
 const VDXPixmap& VDFFVideoSource::GetFrameBuffer()
 {
+	if ( m_fmtBuffer != m_pixmap.format )
+	{
+		prepareFrameBuffer( &m_avframe, m_pixmap.format, &m_frameBuffer[0] );
+		m_fmtBuffer = m_pixmap.format;
+	}
 	return m_pixmap;
 }
 
 bool VDFFVideoSource::SetTargetFormat(int format, bool useDIBAlignment)
 {
 	if (format == 0)
-		format = nsVDXPixmap::kPixFormat_XRGB8888;
+	{
+		switch (m_pCodecCtx->pix_fmt)
+		{
+		case PIX_FMT_YUV420P:
+			format = nsVDXPixmap::kPixFormat_YUV420_Planar;
+			break;
 
-	if (format != nsVDXPixmap::kPixFormat_XRGB8888)
-		return false;
+		case PIX_FMT_UYVY422:
+			format = nsVDXPixmap::kPixFormat_YUV422_UYVY;
+			break;
 
+		case PIX_FMT_YUYV422:
+			format = nsVDXPixmap::kPixFormat_YUV422_YUYV;
+			break;
+
+		case PIX_FMT_RGB555:
+		case PIX_FMT_BGR555:
+			format = nsVDXPixmap::kPixFormat_RGB565;
+			break;
+
+		case PIX_FMT_BGR24:
+		case PIX_FMT_RGB24:
+			format = nsVDXPixmap::kPixFormat_RGB888;
+			break;
+
+		default:
+			format = nsVDXPixmap::kPixFormat_RGB888;
+			break;
+
+		}
+	}
+
+	const sint32 w = m_pCodecCtx->width;
+	const sint32 h =  m_pCodecCtx->height;
+	
 	m_frameBuffer.resize(  m_pCodecCtx->width* m_pCodecCtx->height*4 );
 
-	m_pixmap.data			= &m_frameBuffer[0];
-	m_pixmap.palette			= NULL;
+	uint8 *pBuffer = &m_frameBuffer[0];
+
+	m_pixmap.data			= pBuffer;
+	m_pixmap.palette		= NULL;
 	m_pixmap.format			= format;
 	m_pixmap.w				= m_pCodecCtx->width;
 	m_pixmap.h				= m_pCodecCtx->height;
-	m_pixmap.pitch			= m_pixmap.w * 4;
+	m_pixmap.pitch			= 0;
 	m_pixmap.data2			= NULL;
 	m_pixmap.pitch2			= 0;
 	m_pixmap.data3			= NULL;
 	m_pixmap.pitch3			= 0;
 
-	if (useDIBAlignment)
+	switch(format) 
 	{
-		m_pixmap.data	= (char *)m_pixmap.data + m_pixmap.pitch*(m_pixmap.h - 1);
-		m_pixmap.pitch	= -m_pixmap.pitch;
-	}
+	case nsVDXPixmap::kPixFormat_YUV420_Planar:
+		{
+			m_pixmap.data	= pBuffer;
+			m_pixmap.pitch	= w;
+			m_pixmap.data2	= pBuffer += w*h;
+			m_pixmap.pitch2 = w >> 1;
+			m_pixmap.data3	= pBuffer += (w*h >> 2);
+			m_pixmap.pitch3 = w >> 1;
+		}
+		break;
 
-	Reset();
+	case nsVDXPixmap::kPixFormat_Y8:
+		{
+			m_pixmap.data	= pBuffer;
+			m_pixmap.pitch	= w;
+
+		}
+		break;
+
+	case nsVDXPixmap::kPixFormat_YUV422_UYVY:
+
+		m_pixmap.data	= pBuffer;
+		m_pixmap.pitch	= w*2;
+
+		break;
+
+	case nsVDXPixmap::kPixFormat_YUV422_YUYV:
+
+		m_pixmap.data	= pBuffer;
+		m_pixmap.pitch	= w*2;
+		
+		break;
+
+	case nsVDXPixmap::kPixFormat_XRGB1555:
+
+		if ( useDIBAlignment )
+		{
+			m_pixmap.data	= pBuffer + w*2*(h-1);
+			m_pixmap.pitch	=  -w*2;
+
+		} else
+		{
+			m_pixmap.data	= pBuffer;
+			m_pixmap.pitch	= w*2;
+		}
+
+		break;
+
+	case nsVDXPixmap::kPixFormat_RGB565:
+
+		if ( useDIBAlignment )
+		{
+			m_pixmap.data	= pBuffer + w*2*(h-1);
+			m_pixmap.pitch	=  -w*2;
+
+		} else
+		{
+			m_pixmap.data	= pBuffer;
+			m_pixmap.pitch	= w*2;
+		}
+
+		break;
+
+	case nsVDXPixmap::kPixFormat_RGB888:
+
+		if ( useDIBAlignment )
+		{
+			m_pixmap.data	= pBuffer + w*3*(h-1);
+			m_pixmap.pitch	=  -w*3;
+
+		} else
+		{
+			m_pixmap.data	= pBuffer;
+			m_pixmap.pitch	= w*3;
+		}
+
+		break;
+
+	case nsVDXPixmap::kPixFormat_XRGB8888:
+
+		if ( useDIBAlignment )
+		{
+			m_pixmap.data	= pBuffer + w*4*(h-1);
+			m_pixmap.pitch	= -w*4;
+
+		} else
+		{
+			m_pixmap.data	= pBuffer;
+			m_pixmap.pitch	= w*4;
+		}
+
+
+		break;
+
+	default:
+		return false;
+		break;
+	}
 
 	return true;
 }
@@ -956,6 +1105,11 @@ bool VDFFVideoSource::SetDecompressedFormat(const VDXBITMAPINFOHEADER *pbih)
 
 const void *VDFFVideoSource::GetFrameBufferBase()
 {
+	if ( m_fmtBuffer != m_pixmap.format )
+	{
+		prepareFrameBuffer( &m_avframe, m_pixmap.format, &m_frameBuffer[0] );
+		m_fmtBuffer = m_pixmap.format;
+	}
 	return &m_frameBuffer[0];
 }
 
