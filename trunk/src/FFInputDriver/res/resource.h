@@ -17,6 +17,8 @@
 #define IDC_VIDEO_WXH                   1009
 #define IDC_VIDEO_BITRATE               1010
 #define IDC_VIDEO_FRAMERATE             1011
+#define IDC_VIDEO_FRAMERATE2            1013
+#define IDC_VIDEO_ASPECTRATIO           1013
 #define IDC_VIDEO_FPS                   1054
 #define IDC_VIDEO_CODECNAME             1054
 #define IDC_VIDEO_NUMFRAMES             1055
