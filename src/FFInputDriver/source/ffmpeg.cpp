@@ -2199,6 +2199,19 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				sprintf(buf, "%u x %u", pVideoCtx->width, pVideoCtx->height);
 				SetDlgItemText(mhdlg, IDC_VIDEO_WXH, buf);
 
+				if ( pVideoStream->sample_aspect_ratio.num )
+				{
+					sprintf(buf, "%u : %u", pVideoStream->sample_aspect_ratio.num, 
+						pVideoStream->sample_aspect_ratio.den);
+					SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
+				}
+				else if ( pVideoCtx->sample_aspect_ratio.num )
+				{
+					sprintf(buf, "%u : %u", pVideoCtx->sample_aspect_ratio.num, 
+						pVideoCtx->sample_aspect_ratio.den);
+					SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
+				}
+
 				sprintf(buf, "%.2f fps", pVideoStream->r_frame_rate.num/(double)pVideoStream->r_frame_rate.den);
 				SetDlgItemText(mhdlg, IDC_VIDEO_FRAMERATE, buf);
 
@@ -2507,11 +2520,11 @@ const VDXInputDriverDefinition ff_input={
 	ff_sig,
 	L"*.anm|*.asf|*.avi|*.bik|*.dts|*.dxa|*.flv|*.fli|*.flc|*.flx|*.h261"
 	L"|*.h263|*.h264|*.m4v|*.mkv|*.mjp|*.mlp|*.mov|*.mp4|*.3gp|*.3g2|*.mj2|*.mvi|*.ts|*.vob"
-	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t",
+	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t|*.mpg",
 	L"FFMpeg Supported Files |*.anm;*.asf;*.avi;*.bik;*.dts;*.dxa;"
 	L"*.flv;*.fli;*.flc;*.flx;*.h261;*.h263;*.h264;*.m4v;*.mkv;*.mjp;*.mlp;"
 	L"*.mov;*.mp4;*.3gp;*.3g2;*.mj2;*.mvi;*.pmp;*.rm;*.rmvb;*.rpl;*.smk;*.swf;*.vc1;*.wmv;"
-	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t",
+	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t;*.mpg",
 	L"ffmpeg",
 	ff_create
 };
