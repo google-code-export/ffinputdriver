@@ -2326,7 +2326,7 @@ protected:
 
 bool VDFFInputFileOptionsDialog::Show(VDXHWND parent, std::string& args)
 {
-	bool ret = 0 != VDXVideoFilterDialog::Show(NULL, MAKEINTRESOURCE(IDD_FFMPEG_OPTIONS), (HWND)parent);
+	bool ret = 0 != VDXVideoFilterDialog::Show(NULL, MAKEINTRESOURCE(IDD_FF_OPTIONS), (HWND)parent);
 	if (ret)
 		args = mArguments;
 
@@ -2339,15 +2339,16 @@ INT_PTR VDFFInputFileOptionsDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lPar
 		switch(LOWORD(wParam)) {
 			case IDOK:
 				{
-				/*	HWND hwnd = GetDlgItem(mhdlg, IDC_ARGS);
+					HWND hwnd = GetDlgItem(mhdlg, IDC_VIDEO_ADJUSTPAR);
 
-					int len = GetWindowTextLength(hwnd);
+					int state = SendMessage(hwnd,BM_GETCHECK,0,0);
 
-					std::vector<char> buf(len + 1);
-					char *s = &buf[0];
+					if(state == BST_CHECKED) 
+					{
+						int a = 1;
 
-					len = GetWindowText(hwnd, s, len+1);
-					mArguments.assign(s, s+len);*/
+					}
+										
 				}
 				EndDialog(mhdlg, TRUE);
 				return TRUE;
@@ -2520,11 +2521,11 @@ const VDXInputDriverDefinition ff_input={
 	ff_sig,
 	L"*.anm|*.asf|*.avi|*.bik|*.dts|*.dxa|*.flv|*.fli|*.flc|*.flx|*.h261"
 	L"|*.h263|*.h264|*.m4v|*.mkv|*.mjp|*.mlp|*.mov|*.mp4|*.3gp|*.3g2|*.mj2|*.mvi|*.ts|*.vob"
-	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t|*.mpg",
+	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t|*.mpg|*.mxf",
 	L"FFMpeg Supported Files |*.anm;*.asf;*.avi;*.bik;*.dts;*.dxa;"
 	L"*.flv;*.fli;*.flc;*.flx;*.h261;*.h263;*.h264;*.m4v;*.mkv;*.mjp;*.mlp;"
 	L"*.mov;*.mp4;*.3gp;*.3g2;*.mj2;*.mvi;*.pmp;*.rm;*.rmvb;*.rpl;*.smk;*.swf;*.vc1;*.wmv;"
-	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t;*.mpg",
+	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t;*.mpg;*.mxf",
 	L"ffmpeg",
 	ff_create
 };
