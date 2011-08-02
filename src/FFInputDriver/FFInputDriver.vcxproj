@@ -219,6 +219,7 @@ copy ..\..\ffmpeg\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
   </ItemGroup>
   <ItemGroup>
     <None Include="FFInputDriver.def" />
+    <None Include="res\resource.hm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

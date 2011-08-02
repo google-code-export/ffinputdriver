@@ -2,9 +2,9 @@ This is a FFmpeg Win32 shared build by Kyle Schwarz.
 
 Zeranoe's FFmpeg Builds Home Page: http://ffmpeg.zeranoe.com/builds/
 
-Built on Jul  4 2011 21:42:13
+Built on Jul  8 2011 22:29:12
 
-FFmpeg version git-5d4fd1d
+FFmpeg version git-58257ea
 	libavutil    51. 11. 0 / 51. 11. 0
 	libavcodec   53.  7. 0 / 53.  7. 0
 	libavformat  53.  5. 0 / 53.  5. 0

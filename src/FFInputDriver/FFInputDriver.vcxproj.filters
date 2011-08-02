@@ -36,5 +36,8 @@
     <None Include="FFInputDriver.def">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="res\resource.hm">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
