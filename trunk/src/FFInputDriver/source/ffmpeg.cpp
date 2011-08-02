@@ -61,6 +61,7 @@ extern "C" {
 #define MAX_PACKETS_DELTA		50
 #define MAX_DESYNC_TIME			0.1 //(sec)
 
+class VDFFOptions;
 
 class IFFStream;
 class IFFSource
@@ -204,7 +205,17 @@ private:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+class VDFFOptions
+{
+public:
+	VDFFOptions():
+	  bAdjustPAR( 1 ),
+		  bAudioDownmix(1) {}
 
+	  byte		bAdjustPAR;
+	  byte		bAudioDownmix;
+
+};
 ///////////////////////////////////////////////////////////////////////////////
 
 class VDFFVideoSource : public vdxunknown<IVDXStreamSource>, public IVDXVideoSource, public IVDXVideoDecoder, public IVDXVideoDecoderModel, public VDFFStreamBase 
@@ -270,7 +281,7 @@ public:
 
 public:
 	//Internal
-	int			initStream( IFFSource* pSource, int indexStream );
+	int			initStream( IFFSource* pSource, int indexStream, VDFFOptions* pOpts );
 	void		invalidateBuffer( void );
 	void		notifySeek( int64 timestamp );
 
@@ -317,6 +328,7 @@ private:
 	bool							m_bStreamSeeked;
 
 private:
+	byte							m_bAdjustPAR;
 	int64							m_tsStart;
 
 	
@@ -368,7 +380,7 @@ void *VDXAPIENTRY VDFFVideoSource::AsInterface(uint32 iid)
 
 
 
-int VDFFVideoSource::initStream( IFFSource* pSource, int streamIndex )
+int VDFFVideoSource::initStream( IFFSource* pSource, int streamIndex, VDFFOptions* pOpts )
 {
 	int result = VDFFStreamBase::initStream( pSource, streamIndex );
 	if ( result < 0 )
@@ -405,25 +417,51 @@ int VDFFVideoSource::initStream( IFFSource* pSource, int streamIndex )
 	m_streamInfo.mPixelAspectRatio.mNumerator =  1;
 	m_streamInfo.mPixelAspectRatio.mDenominator = 1;
 
-	//TODO: check problem with ASPECT in VD
+	m_bAdjustPAR = pOpts->bAdjustPAR;
+
+	int numAR = 1;
+	int denAR = 1;
+	
 	if ( m_pStreamCtx->sample_aspect_ratio.num )
 	{
-		m_streamInfo.mPixelAspectRatio.mNumerator =  m_pStreamCtx->sample_aspect_ratio.num;
-		m_streamInfo.mPixelAspectRatio.mDenominator = m_pStreamCtx->sample_aspect_ratio.den;
+		numAR =  m_pStreamCtx->sample_aspect_ratio.num;
+		denAR = m_pStreamCtx->sample_aspect_ratio.den;
 	}
 	else if ( m_pCodecCtx->sample_aspect_ratio.num )
 	{
-		m_streamInfo.mPixelAspectRatio.mNumerator =  m_pCodecCtx->sample_aspect_ratio.num;
-		m_streamInfo.mPixelAspectRatio.mDenominator = m_pCodecCtx->sample_aspect_ratio.den;
+		numAR =  m_pCodecCtx->sample_aspect_ratio.num;
+		denAR = m_pCodecCtx->sample_aspect_ratio.den;
 	}
-	
+
+	if ( !m_bAdjustPAR )
+	{
+		m_streamInfo.mPixelAspectRatio.mNumerator =  numAR;
+		m_streamInfo.mPixelAspectRatio.mDenominator = denAR;
+
+	}
 
 	m_pixmap.w =  m_pCodecCtx->width;
 	m_pixmap.h =  m_pCodecCtx->height;
 
-	m_frameBuffer.reserve( m_pCodecCtx->width * m_pCodecCtx->height * 4);
-	m_currentBuffer.reserve(  m_pCodecCtx->width * m_pCodecCtx->height * 4 );
-	m_nextBuffer.reserve(  m_pCodecCtx->width * m_pCodecCtx->height * 4 );
+	if ( m_bAdjustPAR )
+	{
+		double dar = numAR/
+			(double)denAR;
+
+		double par = m_pCodecCtx->width/
+			(double)m_pCodecCtx->height;
+
+		if ( dar > par )
+			m_pixmap.w = (int)(m_pCodecCtx->width * dar + 0.5);
+		else if ( dar < par )
+			m_pixmap.h =  (int)(m_pCodecCtx->height / dar + 0.5);
+
+	
+	}
+	
+	m_frameBuffer.reserve( m_pixmap.w * m_pixmap.h * 4);
+	m_currentBuffer.reserve(   m_pixmap.w * m_pixmap.h * 4 );
+	m_nextBuffer.reserve(   m_pixmap.w * m_pixmap.h * 4 );
 
 	m_currentBuffer.resize(1);
 	m_nextBuffer.resize(1);
@@ -500,8 +538,11 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 
 	uint8_t *pBuffer = (uint8_t *)pFrameBuffer;//mpFrameBuffer;
 
-	int w = m_pCodecCtx->width;
-	int h = m_pCodecCtx->height;
+	int wSrc = m_pCodecCtx->width;
+	int hSrc = m_pCodecCtx->height;
+
+	int wDst = m_pixmap.w;
+	int hDst = m_pixmap.h;
 
 	AVPicture* pPicture = p;
 
@@ -513,16 +554,16 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 	switch(format) {
 	case nsVDXPixmap::kPixFormat_YUV420_Planar:
 		{
-			dstData[0] = pBuffer;					dstStride[0] = w;
-			dstData[1] = dstData[0] + w*h;			dstStride[1] = w >> 1;
-			dstData[2] = dstData[1] +  (w*h >> 2);	dstStride[2] = w >> 1;
+			dstData[0] = pBuffer;					dstStride[0] = wDst;
+			dstData[1] = dstData[0] + wDst*hDst;			dstStride[1] = wDst >> 1;
+			dstData[2] = dstData[1] +  (wDst*hDst >> 2);	dstStride[2] = wDst >> 1;
 
-			size = w*h + (w*h >> 1);
+			size = wDst*hDst + (wDst*hDst >> 1);
 			if ( pBuffer == NULL ) break;
 
-			m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+			m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 				m_pCodecCtx->pix_fmt,
-				w, h, PIX_FMT_YUV420P, SWS_BICUBIC,
+				wDst, hDst, PIX_FMT_YUV420P, SWS_BICUBIC,
 				NULL, NULL, NULL);
 
 			sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -533,16 +574,16 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 
 	case nsVDXPixmap::kPixFormat_Y8:
 		{
-			dstData[0] = pBuffer;					dstStride[0] = w;
-			dstData[1] = dstData[0] + w*h;			dstStride[1] = w >> 1;
-			dstData[2] = dstData[1];				dstStride[2] = w >> 1;
+			dstData[0] = pBuffer;					dstStride[0] = wDst;
+			dstData[1] = dstData[0] + wDst*hDst;			dstStride[1] = wDst >> 1;
+			dstData[2] = dstData[1];				dstStride[2] = wDst >> 1;
 
-			size = w*h ;
+			size = wDst*hDst ;
 			if ( pBuffer == NULL ) break;
 
-			m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+			m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 				m_pCodecCtx->pix_fmt,
-				w, h, PIX_FMT_YUV420P, SWS_BICUBIC,
+				wDst, hDst, PIX_FMT_YUV420P, SWS_BICUBIC,
 				NULL, NULL, NULL);
 
 			sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -553,14 +594,14 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 		break;
 
 	case nsVDXPixmap::kPixFormat_YUV422_UYVY:
-		dstData[0] = pBuffer;					dstStride[0] = w*2;
+		dstData[0] = pBuffer;					dstStride[0] = wDst*2;
 
-		size = w*2*h;
+		size = wDst*2*hDst;
 		if ( pBuffer == NULL ) break;
 
-		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_UYVY422, SWS_FAST_BILINEAR,
+			wDst, hDst, PIX_FMT_UYVY422, SWS_FAST_BILINEAR,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -568,14 +609,14 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 
 		break;
 	case nsVDXPixmap::kPixFormat_YUV422_YUYV:
-		dstData[0] = pBuffer;					dstStride[0] = w*2;
+		dstData[0] = pBuffer;					dstStride[0] = wDst*2;
 
-		size = w*2*h;
+		size = wDst*2*hDst;
 		if ( pBuffer == NULL ) break;
 
-		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_YUYV422, SWS_FAST_BILINEAR,
+			wDst, hDst, PIX_FMT_YUYV422, SWS_FAST_BILINEAR,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -583,28 +624,28 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 
 		break;
 	case nsVDXPixmap::kPixFormat_XRGB1555:
-		dstData[0] = pBuffer + w*2*(h-1);					dstStride[0] = -w*2;
+		dstData[0] = pBuffer + wDst*2*(hDst-1);					dstStride[0] = -wDst*2;
 
-		size = w*2*h;
+		size = wDst*2*hDst;
 		if ( pBuffer == NULL ) break;
 
-		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_RGB555, SWS_BICUBIC,
+			wDst, hDst, PIX_FMT_RGB555, SWS_BICUBIC,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
 			m_pCodecCtx->height, dstData, dstStride);
 		break;
 	case nsVDXPixmap::kPixFormat_RGB565:
-		dstData[0] = pBuffer + w*2*(h-1);	dstStride[0] = -w*2;
+		dstData[0] = pBuffer + wDst*2*(hDst-1);	dstStride[0] = -wDst*2;
 
-		size = w*2*h;
+		size = wDst*2*hDst;
 		if ( pBuffer == NULL ) break;
 
-		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_RGB565, SWS_BICUBIC,
+			wDst, hDst, PIX_FMT_RGB565, SWS_BICUBIC,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -612,14 +653,14 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 
 		break;
 	case nsVDXPixmap::kPixFormat_RGB888:
-		dstData[0] = pBuffer + w*3*(h-1); dstStride[0] = -w*3;
+		dstData[0] = pBuffer + wDst*3*(hDst-1); dstStride[0] = -wDst*3;
 
-		size = w*3*h;
+		size = wDst*3*hDst;
 		if ( pBuffer == NULL ) break;
 
-		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_BGR24, SWS_BICUBIC,
+			wDst, hDst, PIX_FMT_BGR24, SWS_BICUBIC,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -627,14 +668,14 @@ uint32 VDFFVideoSource::prepareFrameBuffer( AVPicture* p, int format, void* pFra
 
 		break;
 	case nsVDXPixmap::kPixFormat_XRGB8888:
-		dstData[0] = pBuffer + w*4*(h-1); dstStride[0] = -w*4;
+		dstData[0] = pBuffer + wDst*4*(hDst-1); dstStride[0] = -wDst*4;
 
-		size = w*4*h;
+		size = wDst*4*hDst;
 		if ( pBuffer == NULL ) break;
 
-		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, w, h,
+		m_pSwsCtx = sws_getCachedContext(m_pSwsCtx, wSrc, hSrc,
 			m_pCodecCtx->pix_fmt,
-			w, h, PIX_FMT_BGRA, SWS_BICUBIC,
+			wDst, hDst, PIX_FMT_BGRA, SWS_BICUBIC,
 			NULL, NULL, NULL);
 
 		sws_scale( m_pSwsCtx, pPicture->data, pPicture->linesize, 0,
@@ -785,8 +826,8 @@ sint64 VDFFVideoSource::PositionToTimeVBR(sint64 samples)
 void VDFFVideoSource::GetVideoSourceInfo(VDXVideoSourceInfo& info)
 {
 	info.mFlags = 0;
-	info.mWidth = m_pCodecCtx->width;
-	info.mHeight = m_pCodecCtx->height;
+	info.mWidth = m_pixmap.w;
+	info.mHeight = m_pixmap.h;
 	info.mDecoderModel = VDXVideoSourceInfo::kDecoderModelCustom;
 }
 
@@ -930,7 +971,7 @@ const void *VDFFVideoSource::DecodeFrame(const void *inputBuffer, uint32 data_le
 	AVPicture avpicture, *pPicture = &avpicture;
 
 	avpicture_fill( pPicture, pInBuffer, 
-		m_pCodecCtx->pix_fmt, m_pCodecCtx->width, m_pCodecCtx->height );
+		m_pCodecCtx->pix_fmt, m_pCodecCtx->width,m_pCodecCtx->height );
 
 	prepareFrameBuffer( pPicture, m_pixmap.format, pOutBuffer );
 
@@ -992,18 +1033,18 @@ bool VDFFVideoSource::SetTargetFormat(int format, bool useDIBAlignment)
 		}
 	}
 
-	const sint32 w = m_pCodecCtx->width;
-	const sint32 h =  m_pCodecCtx->height;
+	const sint32 w = m_pixmap.w;
+	const sint32 h =  m_pixmap.h;
 	
-	m_frameBuffer.resize(  m_pCodecCtx->width* m_pCodecCtx->height*4 );
+	m_frameBuffer.resize( m_pixmap.w* m_pixmap.h*4 );
 
 	uint8 *pBuffer = &m_frameBuffer[0];
 
 	m_pixmap.data			= pBuffer;
 	m_pixmap.palette		= NULL;
 	m_pixmap.format			= format;
-	m_pixmap.w				= m_pCodecCtx->width;
-	m_pixmap.h				= m_pCodecCtx->height;
+	//m_pixmap.w				= m_pCodecCtx->width;
+	//m_pixmap.h				= m_pCodecCtx->height;
 	m_pixmap.pitch			= 0;
 	m_pixmap.data2			= NULL;
 	m_pixmap.pitch2			= 0;
@@ -1219,7 +1260,7 @@ public:
 	void VDXAPIENTRY GetAudioSourceInfo(VDXAudioSourceInfo& info);
 
 public:
-	int initStream( IFFSource* pSource, int indexStream );
+	int initStream( IFFSource* pSource, int indexStream, VDFFOptions* pOpts );
 	uint32		decodeFramePacket( uint8_t *&pBuffer, AVPacket* pPacket);
 
 	sint64		getPts(AVPacket* pPacket);
@@ -1339,7 +1380,7 @@ void *VDXAPIENTRY VDFFAudioSource::AsInterface(uint32 iid)
 }
 
 
-int	VDFFAudioSource::initStream( IFFSource* pSource, int indexStream )
+int	VDFFAudioSource::initStream( IFFSource* pSource, int indexStream, VDFFOptions* pOpts )
 {
 	int result = VDFFStreamBase::initStream( pSource, indexStream );
 	if ( result < 0 )
@@ -1779,12 +1820,15 @@ sint64		VDFFAudioSource::getPts(AVPacket* pPacket)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class VDFFInputFileOptions : public vdxunknown<IVDXInputOptions> {
+
+
+class VDFFInputFileOptions : public vdxunknown<IVDXInputOptions>, public VDFFOptions {
 public:
+	
+
 	bool Read(const void *src, uint32 len);
 	uint32 VDXAPIENTRY Write(void *buf, uint32 buflen);
 
-	std::string mArguments;
 
 protected:
 	struct Header {
@@ -1811,17 +1855,25 @@ bool VDFFInputFileOptions::Read(const void *src, uint32 len) {
 		return false;
 
 	const char *args = (const char *)src + sizeof(Header);
-	mArguments.assign(args, args + hdr.arglen);
+
+	bAdjustPAR = *args;
+	args += sizeof( bAdjustPAR );
+	bAudioDownmix = *args;
+	
 	return true;
 }
 
-uint32 VDXAPIENTRY VDFFInputFileOptions::Write(void *buf, uint32 buflen) {
-	uint32 required = sizeof(Header) + (uint32)mArguments.size() + 1;
+uint32 VDXAPIENTRY VDFFInputFileOptions::Write(void *buf, uint32 buflen)
+{
+	uint32 required = sizeof(Header) + sizeof(bAdjustPAR) + sizeof( bAudioDownmix ) + 1;
 	if (buf) {
-		const Header hdr = { kSignature, required, 1, (uint32)mArguments.size() };
+		const Header hdr = { kSignature, required, 1, sizeof(bAdjustPAR) + sizeof( bAudioDownmix ) };
 
 		memcpy(buf, &hdr, sizeof(Header));
-		memcpy((char *)buf + sizeof(Header), mArguments.data(), mArguments.size());
+		byte* pBuf = (byte *)buf + sizeof(Header);
+		*pBuf = bAdjustPAR;
+		pBuf += sizeof(bAdjustPAR);
+		*pBuf = bAudioDownmix;
 	}
 
 	return required;
@@ -1917,6 +1969,7 @@ protected:
 	AVFormatContext				*m_pFormatCtx;
 
 	std::vector<IFFStream*>		m_streams;
+	VDFFOptions					m_options;
 
 	const VDXInputDriverContext& mContext;
 };
@@ -2316,39 +2369,72 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 
 class VDFFInputFileOptionsDialog : public VDXVideoFilterDialog {
 public:
-	bool Show(VDXHWND parent, std::string& args);
+
+	VDFFInputFileOptionsDialog(): m_pOpts(NULL){}
+	bool Show(VDXHWND parent, VDFFInputFileOptions *opts );
 
 	virtual INT_PTR DlgProc(UINT msg, WPARAM wParam, LPARAM lParam);
 
 protected:
-	std::string mArguments;
+	VDFFInputFileOptions	*m_pOpts;
+	
 };
 
-bool VDFFInputFileOptionsDialog::Show(VDXHWND parent, std::string& args)
+bool VDFFInputFileOptionsDialog::Show(VDXHWND parent, VDFFInputFileOptions *opts)
 {
-	bool ret = 0 != VDXVideoFilterDialog::Show(NULL, MAKEINTRESOURCE(IDD_FF_OPTIONS), (HWND)parent);
-	if (ret)
-		args = mArguments;
+	
+	m_pOpts = opts;
 
+	bool ret = 0 != VDXVideoFilterDialog::Show(NULL, MAKEINTRESOURCE(IDD_FF_OPTIONS), (HWND)parent);
+	
 	return ret;
 }
 
 INT_PTR VDFFInputFileOptionsDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	if ( msg == WM_INITDIALOG )
+	{
+		HWND hwnd = GetDlgItem(mhdlg, IDC_VIDEO_ADJUSTPAR);
+
+		if ( m_pOpts )
+			if ( m_pOpts->bAdjustPAR == 1 )
+				SendMessage(hwnd,BM_SETCHECK,(WPARAM)BST_CHECKED,0);
+			else
+				SendMessage(hwnd,BM_SETCHECK,(WPARAM)BST_UNCHECKED,0);
+
+
+		hwnd = GetDlgItem(mhdlg, IDC_AUDIO_DOWNMIX);
+
+		if ( m_pOpts )
+			if ( m_pOpts->bAudioDownmix == 1 )
+				SendMessage(hwnd,BM_SETCHECK,(WPARAM)BST_CHECKED,0);
+			else
+				SendMessage(hwnd,BM_SETCHECK,(WPARAM)BST_UNCHECKED,0);
+
+	}
 	if (msg == WM_COMMAND) {
-		switch(LOWORD(wParam)) {
+		switch(LOWORD(wParam)) 
+		{
+			
 			case IDOK:
 				{
 					HWND hwnd = GetDlgItem(mhdlg, IDC_VIDEO_ADJUSTPAR);
 
 					int state = SendMessage(hwnd,BM_GETCHECK,0,0);
+					
+					m_pOpts->bAdjustPAR = 0;
+					if(state == BST_CHECKED && m_pOpts) 
+						m_pOpts->bAdjustPAR = 1;
 
-					if(state == BST_CHECKED) 
-					{
-						int a = 1;
+						
+					hwnd = GetDlgItem(mhdlg, IDC_AUDIO_DOWNMIX);
 
-					}
-										
+					state = SendMessage(hwnd,BM_GETCHECK,0,0);
+
+					m_pOpts->bAudioDownmix = 0;
+					if(state == BST_CHECKED && m_pOpts) 
+						m_pOpts->bAudioDownmix = 1;
+
 				}
 				EndDialog(mhdlg, TRUE);
 				return TRUE;
@@ -2370,9 +2456,12 @@ bool VDFFInputFile::PromptForOptions(VDXHWND parent, IVDXInputOptions **ppOption
 
 	opts->AddRef();
 
+	*(VDFFOptions*)opts = m_options;
+
 	VDFFInputFileOptionsDialog dlg;
-	if (dlg.Show(parent, opts->mArguments)) {
+	if (dlg.Show(parent, opts)) {
 		*ppOptions = opts;
+		m_options = *opts;
 		return true;
 	} else {
 		delete opts;
@@ -2394,6 +2483,7 @@ bool VDFFInputFile::CreateOptions(const void *buf, uint32 len, IVDXInputOptions 
 	}
 
 	*ppOptions = opts;
+	m_options = *opts;
 	opts->AddRef();
 	return false;
 }
@@ -2417,12 +2507,13 @@ bool VDFFInputFile::GetVideoSource(int index, IVDXVideoSource **ppVS)
 	if (!pVS)
 		return false;
 
-	if (pVS->initStream( this, index ) < 0)
+	if (pVS->initStream( this, index, &m_options ) < 0)
 	{
 		pVS->Release();
 		return false;
 
 	}
+	
 	*ppVS = pVS;
 	pVS->AddRef();
 	return true;
@@ -2441,7 +2532,7 @@ bool VDFFInputFile::GetAudioSource(int index, IVDXAudioSource **ppAS)
 	if (!pAS)
 		return false;
 
-	if (pAS->initStream( this, index ) < 0)
+	if (pAS->initStream( this, index, &m_options ) < 0)
 	{
 		pAS->Release();
 		return false;
