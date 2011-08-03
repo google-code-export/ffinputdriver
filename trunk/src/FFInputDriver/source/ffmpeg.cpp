@@ -52,8 +52,8 @@ extern "C" {
 #define INPUT_DRIVER_TAG  "[FFMpeg]"
 
 #define FFDRIVER_VERSION_MAJOR		0
-#define FFDRIVER_VERSION_MINOR		5
-#define FFDRIVER_VERSION_BUILD		116
+#define FFDRIVER_VERSION_MINOR		6
+#define FFDRIVER_VERSION_BUILD		171
 
 
 //Cut-off buffer from demuxer (mostly for not used audio streams);
@@ -448,12 +448,12 @@ int VDFFVideoSource::initStream( IFFSource* pSource, int streamIndex, VDFFOption
 		double dar = numAR/
 			(double)denAR;
 
-		double par = m_pCodecCtx->width/
-			(double)m_pCodecCtx->height;
+		//double par = m_pCodecCtx->width/
+		//	(double)m_pCodecCtx->height;
 
-		if ( dar > par )
+		if ( dar > 1 )
 			m_pixmap.w = (int)(m_pCodecCtx->width * dar + 0.5);
-		else if ( dar < par )
+		else if ( dar < 1 )
 			m_pixmap.h =  (int)(m_pCodecCtx->height / dar + 0.5);
 
 	
@@ -2264,6 +2264,11 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 						pVideoCtx->sample_aspect_ratio.den);
 					SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
 				}
+                else
+                {
+                    sprintf(buf, "%u : %u", 1, 1);
+                    SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
+                }
 
 				sprintf(buf, "%.2f fps", pVideoStream->r_frame_rate.num/(double)pVideoStream->r_frame_rate.den);
 				SetDlgItemText(mhdlg, IDC_VIDEO_FRAMERATE, buf);
@@ -2612,11 +2617,11 @@ const VDXInputDriverDefinition ff_input={
 	ff_sig,
 	L"*.anm|*.asf|*.avi|*.bik|*.dts|*.dxa|*.flv|*.fli|*.flc|*.flx|*.h261"
 	L"|*.h263|*.h264|*.m4v|*.mkv|*.mjp|*.mlp|*.mov|*.mp4|*.3gp|*.3g2|*.mj2|*.mvi|*.ts|*.vob"
-	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t|*.mpg|*.mxf",
+	L"|*.pmp|*.rm|*.rmvb|*.rpl|*.smk|*.swf|*.vc1|*.wmv|*.mts|*.m2ts|*.m2t|*.mpg|*.mxf|*.ogm|*.qt|*.tp|*.dvr-ms|*.amv",
 	L"FFMpeg Supported Files |*.anm;*.asf;*.avi;*.bik;*.dts;*.dxa;"
 	L"*.flv;*.fli;*.flc;*.flx;*.h261;*.h263;*.h264;*.m4v;*.mkv;*.mjp;*.mlp;"
 	L"*.mov;*.mp4;*.3gp;*.3g2;*.mj2;*.mvi;*.pmp;*.rm;*.rmvb;*.rpl;*.smk;*.swf;*.vc1;*.wmv;"
-	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t;*.mpg;*.mxf",
+	L"*.ts;*.vob;*.mts;*.m2ts;*.m2t;*.mpg;*.mxf;*.ogm;*.qt;*.tp;*.dvr-ms;*.amv",
 	L"ffmpeg",
 	ff_create
 };

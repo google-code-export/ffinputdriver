@@ -2,14 +2,14 @@ This is a FFmpeg Win32 shared build by Kyle Schwarz.
 
 Zeranoe's FFmpeg Builds Home Page: http://ffmpeg.zeranoe.com/builds/
 
-Built on Jul  8 2011 22:29:12
+Built on Jul 31 2011 18:53:19
 
-FFmpeg version git-58257ea
-	libavutil    51. 11. 0 / 51. 11. 0
-	libavcodec   53.  7. 0 / 53.  7. 0
-	libavformat  53.  5. 0 / 53.  5. 0
+FFmpeg version git-335bbe4
+	libavutil    51. 11. 1 / 51. 11. 1
+	libavcodec   53.  9. 0 / 53.  9. 0
+	libavformat  53.  6. 0 / 53.  6. 0
 	libavdevice  53.  2. 0 / 53.  2. 0
-	libavfilter   2. 24. 3 /  2. 24. 3
+	libavfilter   2. 27. 5 /  2. 27. 5
 	libswscale    2.  0. 0 /  2.  0. 0
 	libpostproc  51.  2. 0 / 51.  2. 0
 
@@ -48,7 +48,7 @@ This version of FFmpeg was built on:
 	Ubuntu Desktop 11.04: http://www.ubuntu.com/desktop
 	
 The cross-compile toolchain used to compile this FFmpeg was:
-	MinGW-w64 r4240: http://mingw-w64.sourceforge.net/
+	MinGW-w64 r4279: http://mingw-w64.sourceforge.net/
 	winpthreads (part of MinGW-w64)
 
 The GCC version used to compile this FFmpeg was:
@@ -58,18 +58,18 @@ The external libaries compiled into this FFmpeg are:
 	bzip2 1.0.6 http://www.bzip.org
 	Frei0r 1.3 http://frei0r.dyne.org/
 	opencore-amr 0.1.2 http://sourceforge.net/projects/opencore-amr/
-	FreeType 2.4.4 http://www.freetype.org/
+	FreeType 2.4.5 http://www.freetype.org/
 	gsm 1.0.13-3 http://libgsm.sourcearchive.com/
 	LAME 3.98.4 http://lame.sourceforge.net/
 	OpenJPEG 1.4 http://www.openjpeg.org/
-	RTMP git-6155179b http://rtmpdump.mplayerhq.hu/
+	RTMP git-b627335d http://rtmpdump.mplayerhq.hu/
 	Schroedinger 1.0.10 http://diracvideo.org/
 	Speex 1.2rc1 http://www.speex.org/
 	Theora 1.1.1 http://www.theora.org/
 	Vorbis 1.3.2 http://www.vorbis.com/
 	libvpx 0.9.6 http://www.webmproject.org/code/
-	x264 git-4c552d87 http://www.videolan.org/developers/x264.html
-	XAVS r51 http://xavs.sourceforge.net/
+	x264 git-f8ebd4ab http://www.videolan.org/developers/x264.html
+	XAVS r54 http://xavs.sourceforge.net/
 	Xvid 1.3.2 http://www.xvid.org/
 	zlib 1.2.5 http://zlib.net/
 

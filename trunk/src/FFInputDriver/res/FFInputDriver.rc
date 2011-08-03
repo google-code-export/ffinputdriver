@@ -2,11 +2,6 @@
 //
 #include "resource.h"
 
-// Generated Help ID header file
-#define APSTUDIO_HIDDEN_SYMBOLS
-#include "resource.hm"
-#undef APSTUDIO_HIDDEN_SYMBOLS
-
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -30,8 +25,8 @@ LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,5,0,1
- PRODUCTVERSION 1,5,0,1
+ FILEVERSION 1,6,0,1
+ PRODUCTVERSION 1,6,0,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -48,12 +43,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Andrey Kovalchuk"
             VALUE "FileDescription", "VirtualDub FFMpeg Input Plugin"
-            VALUE "FileVersion", "1.5.0.1"
+            VALUE "FileVersion", "1.6.0.1"
             VALUE "InternalName", "FFInputDriver.dll"
             VALUE "LegalCopyright", "Copyright (C) 2011,  Andrey Kovalchuk"
             VALUE "OriginalFilename", "FFInputDriver.vdplugin"
             VALUE "ProductName", "FFInputDriver"
-            VALUE "ProductVersion", "1.5.0.1"
+            VALUE "ProductVersion", "1.6.0.1"
         END
     END
     BLOCK "VarFileInfo"
@@ -144,7 +139,7 @@ BEGIN
     LTEXT           "Bitrate:",IDC_STATIC,13,44,43,8
     CTEXT           "",IDC_BITRATE,115,43,161,10,SS_SUNKEN
     CTEXT           "",IDC_VIDEO_ASPECTRATIO,116,111,161,10,SS_SUNKEN
-    LTEXT           "Aspect Ratio:",IDC_STATIC,13,111,72,8
+    LTEXT           "Pixel Aspect Ratio:",IDC_STATIC,13,111,72,8
 END
 
 IDD_FF_OPTIONS DIALOGEX 0, 0, 191, 74
@@ -154,8 +149,8 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,76,53,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,134,53,50,14
-    CONTROL         "Adjust Pixel Aspect Ratio",IDC_VIDEO_ADJUSTPAR,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,7,7,96,10,0,HIDC_VIDEO_ADJUSTPAR
-    CONTROL         "Downmix Audio",IDC_AUDIO_DOWNMIX,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,38,18,65,10
+    CONTROL         "Adjust Pixel Aspect Ratio",IDC_VIDEO_ADJUSTPAR,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,7,7,96,10
+    CONTROL         "Downmix Audio",IDC_AUDIO_DOWNMIX,"Button",BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,38,18,65,10
 END
 
 
