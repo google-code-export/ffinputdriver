@@ -89,12 +89,20 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\ffmpeg\include;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\ffmpeg\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\ffmpeg\x86\include;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\ffmpeg\x86\lib;$(LibraryPath)</LibraryPath>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">.vdplugin</TargetExt>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.vdplugin</TargetExt>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\ffmpeg\include;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\ffmpeg\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\ffmpeg\x86\include;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\ffmpeg\x86\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\ffmpeg\x64\include;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\ffmpeg\x64\lib;$(LibraryPath)</LibraryPath>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectName)_64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.vdplugin</TargetExt>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectName)_64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.vdplugin</TargetExt>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\ffmpeg\x64\include;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\ffmpeg\x64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -123,7 +131,7 @@
     </Link>
     <PostBuildEvent>
       <Command>copy $(OutDir)\$(TargetName).* ..\..\test\plugins32
-copy ..\..\ffmpeg\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
+copy ..\..\ffmpeg\x86\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -133,7 +141,7 @@ copy ..\..\ffmpeg\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\include;include;res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;SAMPLEINPUTDRIVER_EXPORTS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FFINPUTDRIVER_EXPORTS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -146,17 +154,23 @@ copy ..\..\ffmpeg\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>SampleInputDriver.def</ModuleDefinitionFile>
+      <AdditionalDependencies>VDXFrame.lib;avcodec.lib;avutil.lib;avformat.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>FFInputDriver.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
+      <DelayLoadDLLs>avcodec-53.dll;avformat-53.dll;avutil-51.dll;swscale-2.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(OutDir)\$(TargetName).* ..\..\test\plugins64
+copy ..\..\ffmpeg\x64\bin\*.dll ..\..\test\plugins64\ffdlls</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\include;include;res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SAMPLEINPUTDRIVER_EXPORTS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;FFINPUTDRIVER_EXPORTS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -187,7 +201,7 @@ copy ..\..\ffmpeg\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\include;include;res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;SAMPLEINPUTDRIVER_EXPORTS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;FFINPUTDRIVER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -198,14 +212,19 @@ copy ..\..\ffmpeg\bin\*.dll ..\..\test\plugins32\ffdlls</Command>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>SampleInputDriver.def</ModuleDefinitionFile>
+      <AdditionalDependencies>VDXFrame.lib;avcodec.lib;avutil.lib;avformat.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>FFInputDriver.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX64</TargetMachine>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>avcodec-53.dll;avformat-53.dll;avutil-51.dll;swscale-2.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(OutDir)\$(TargetName).* ..\..\test\plugins64</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\ffmpeg.cpp" />

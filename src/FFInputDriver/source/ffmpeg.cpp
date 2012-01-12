@@ -52,8 +52,8 @@ extern "C" {
 #define INPUT_DRIVER_TAG  "[FFMpeg]"
 
 #define FFDRIVER_VERSION_MAJOR		0
-#define FFDRIVER_VERSION_MINOR		6
-#define FFDRIVER_VERSION_BUILD		171
+#define FFDRIVER_VERSION_MINOR		7
+#define FFDRIVER_VERSION_BUILD		188
 
 
 //Cut-off buffer from demuxer (mostly for not used audio streams);
@@ -739,7 +739,7 @@ bool VDFFVideoSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint3
 				m_currentBuffer = m_nextBuffer;
 			m_nextBuffer.resize( size );
 			avpicture_layout( (AVPicture*)pFrame, m_pCodecCtx->pix_fmt, m_pCodecCtx->width, m_pCodecCtx->height,
-				&m_nextBuffer[0], m_nextBuffer.size());
+				&m_nextBuffer[0], (int)m_nextBuffer.size());
 						
 			if ( m_bStreamSeeked )
 			{
@@ -766,7 +766,7 @@ bool VDFFVideoSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint3
 	
 	if (!lpBuffer) {
 		if (lSamplesRead) *lSamplesRead = 1;
-		if (lBytesRead) *lBytesRead = m_currentBuffer.size();
+		if (lBytesRead) *lBytesRead = (uint32)m_currentBuffer.size();
 		return true;
 	}
 
@@ -777,7 +777,7 @@ bool VDFFVideoSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint3
 	}
 
 	if (lSamplesRead) *lSamplesRead = 1;
-	if (lBytesRead) *lBytesRead =  m_currentBuffer.size();
+	if (lBytesRead) *lBytesRead =  (uint32)m_currentBuffer.size();
 
 	memcpy( lpBuffer, &m_currentBuffer[0], m_currentBuffer.size() );
 	
@@ -1471,8 +1471,8 @@ int	VDFFAudioSource::initStream( IFFSource* pSource, int indexStream, VDFFOption
 	mRawFormat.mFormatTag		= mRawFormat.kFormatPCM;
 	mRawFormat.mChannels		= (WORD) m_pCodecCtx->request_channels;
 	mRawFormat.mSamplesPerSec	= m_pCodecCtx->sample_rate;
-	mRawFormat.mBitsPerSample	= (WORD)av_get_bits_per_sample_fmt(SAMPLE_FMT_S16);//16
-	mRawFormat.mAvgBytesPerSec	= m_pCodecCtx->sample_rate*mRawFormat.mChannels*mRawFormat.mBitsPerSample/8;//pwfex->nSamplesPerSec*4;
+	mRawFormat.mBitsPerSample	= (WORD)av_get_bytes_per_sample(SAMPLE_FMT_S16) * 8;//16
+	mRawFormat.mAvgBytesPerSec	= m_pCodecCtx->sample_rate*mRawFormat.mChannels*av_get_bytes_per_sample(SAMPLE_FMT_S16);//pwfex->nSamplesPerSec*4;
 	mRawFormat.mBlockAlign		= (WORD)mRawFormat.mChannels*mRawFormat.mBitsPerSample/8;//4;
 	
 	mRawFormat.mExtraSize			= 0;
@@ -1598,12 +1598,12 @@ uint32 VDFFAudioSource::decodeFramePacket( uint8_t  *&pBuffer, AVPacket* pPacket
 
 		uint8* pSrcBuffer = m_pFrameBuffer;
 
-		uint32 samplesCount = sizeFrame/ (av_get_bits_per_sample_fmt(m_pCodecCtx->sample_fmt)/8 * m_pCodecCtx->channels );
+		uint32 samplesCount = sizeFrame/ (av_get_bytes_per_sample(m_pCodecCtx->sample_fmt) * m_pCodecCtx->channels );
 
 		if (m_pReformatCtx) 
 		{
             
-            int istride[6]= {av_get_bits_per_sample_fmt(m_pCodecCtx->sample_fmt)/8};
+            int istride[6]= {av_get_bytes_per_sample(m_pCodecCtx->sample_fmt)};
             int ostride[6]= {2};
             int len = sizeFrame/istride[0];
 
@@ -1666,7 +1666,7 @@ uint32 VDFFAudioSource::decodeFramePacket( uint8_t  *&pBuffer, AVPacket* pPacket
 
 bool VDFFAudioSource::Read(sint64 lStart64, uint32 lCount, void *lpBuffer, uint32 cbBuffer, uint32 *lBytesRead, uint32 *lSamplesRead)
 {
-	uint32 bytesPerSample = (uint32)m_pCodecCtx->request_channels*av_get_bits_per_sample_fmt(SAMPLE_FMT_S16)/8;
+	uint32 bytesPerSample = (uint32)m_pCodecCtx->request_channels*av_get_bytes_per_sample(SAMPLE_FMT_S16);
 	if ( lpBuffer && cbBuffer < bytesPerSample )
 		return false;
 
@@ -1887,7 +1887,7 @@ int VDTextWToA(char *dst, int max_dst, const wchar_t *src, int max_src)
 
 	*dst = 0;
 
-	int len = WideCharToMultiByte(CP_ACP, 0, src, max_src, dst, max_dst, NULL, NULL);
+	int len = WideCharToMultiByte(CP_UTF8, 0, src, max_src, dst, max_dst, NULL, NULL);
 
 	// remove null terminator if source was null-terminated (source
 	// length was provided)
@@ -1907,7 +1907,7 @@ void VDDebugCallback(void* ptr, int level, const char* fmt, va_list vl)
 	//	return;
 	line[0]=0;
 
-	strcpy( line, INPUT_DRIVER_TAG );
+	strcpy_s( line, INPUT_DRIVER_TAG );
 	
 	if( avc) 
 	{
@@ -1915,8 +1915,7 @@ void VDDebugCallback(void* ptr, int level, const char* fmt, va_list vl)
 	}
 	
 
-
-	vsnprintf(line + strlen(line), sizeof(line) - strlen(line), fmt, vl);
+	vsnprintf_s(line + strlen(line), sizeof(line) - strlen(line), 1024, fmt, vl);
 
 	//print_prefix= line[strlen(line)-1] == '\n';
 
@@ -1936,7 +1935,7 @@ void VDDebugCallback(void* ptr, int level, const char* fmt, va_list vl)
 	}
 	//colored_fputs(av_clip(level>>3, 0, 6), line);
 	OutputDebugString(line);
-	strcpy(prev, line);
+	strcpy_s(prev, line);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2002,23 +2001,11 @@ void VDFFInputFile::Init(const wchar_t *szFile, IVDXInputOptions *opts)
 
 	//wcstombs(abuf, szFile, 1024);
 	abuf[1023] = 0;
-
-
-	AVFormatParameters params, *ap = &params;
-
-	memset(ap, 0, sizeof(*ap));
-
-	//ap->width = frame_width;
-	//ap->height= frame_height;
-	ap->time_base.num = 1;
-	ap->time_base.den = 25;
-
-	ap->pix_fmt = PIX_FMT_NONE;
-
+	
 	int err = 0;
 
 	// Open video file
-	if( (err = av_open_input_file(&m_pFormatCtx, abuf, NULL, 0, ap))!=0)
+	if( (err = avformat_open_input(&m_pFormatCtx, abuf, NULL, NULL))!=0)
 	{
 		mContext.mpCallbacks->SetError("Unable to open file: %ls", szFile);
 		return;
@@ -2027,7 +2014,7 @@ void VDFFInputFile::Init(const wchar_t *szFile, IVDXInputOptions *opts)
 	 m_pFormatCtx->flags |= AVFMT_FLAG_GENPTS;
 
 	// Retrieve stream information
-	if( (err = av_find_stream_info(m_pFormatCtx))<0)
+	if( (err = avformat_find_stream_info(m_pFormatCtx, NULL))<0)
 	{
 		mContext.mpCallbacks->SetError("Couldn't find stream information of file: %ls", szFile);
 		return;
@@ -2197,16 +2184,16 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 			seconds -= (minutes * 60);
 
 			//sprintf(buf, "%ld µs", pFormatCtx->duration);
-			sprintf(buf, "%d h : %d min : %.2f sec", hours, minutes,seconds);
+			sprintf_s(buf, "%d h : %d min : %.2f sec", hours, minutes,seconds);
 			SetDlgItemText(mhdlg, IDC_DURATION, buf);
 
-			sprintf(buf, "%.2f sec", pFormatCtx->start_time/(double)AV_TIME_BASE);
+			sprintf_s(buf, "%.2f sec", pFormatCtx->start_time/(double)AV_TIME_BASE);
 			SetDlgItemText(mhdlg, IDC_STARTTIME, buf);
 
-			sprintf(buf, "%u kb/sec", pFormatCtx->bit_rate/1000);
+			sprintf_s(buf, "%u kb/sec", pFormatCtx->bit_rate/1000);
 			SetDlgItemText(mhdlg, IDC_BITRATE, buf);
 
-			sprintf(buf, "%u", pFormatCtx->nb_streams);
+			sprintf_s(buf, "%u", pFormatCtx->nb_streams);
 			SetDlgItemText(mhdlg, IDC_STREAMSCOUNT, buf);
 
 			AVCodecContext *pVideoCtx = NULL;
@@ -2249,33 +2236,33 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				else
 					SetDlgItemText(mhdlg, IDC_VIDEO_PIXFMT,"N/A");
 
-				sprintf(buf, "%u x %u", pVideoCtx->width, pVideoCtx->height);
+				sprintf_s(buf, "%u x %u", pVideoCtx->width, pVideoCtx->height);
 				SetDlgItemText(mhdlg, IDC_VIDEO_WXH, buf);
 
 				if ( pVideoStream->sample_aspect_ratio.num )
 				{
-					sprintf(buf, "%u : %u", pVideoStream->sample_aspect_ratio.num, 
+					sprintf_s(buf, "%u : %u", pVideoStream->sample_aspect_ratio.num, 
 						pVideoStream->sample_aspect_ratio.den);
 					SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
 				}
 				else if ( pVideoCtx->sample_aspect_ratio.num )
 				{
-					sprintf(buf, "%u : %u", pVideoCtx->sample_aspect_ratio.num, 
+					sprintf_s(buf, "%u : %u", pVideoCtx->sample_aspect_ratio.num, 
 						pVideoCtx->sample_aspect_ratio.den);
 					SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
 				}
                 else
                 {
-                    sprintf(buf, "%u : %u", 1, 1);
+                    sprintf_s(buf, "%u : %u", 1, 1);
                     SetDlgItemText(mhdlg, IDC_VIDEO_ASPECTRATIO, buf);
                 }
 
-				sprintf(buf, "%.2f fps", pVideoStream->r_frame_rate.num/(double)pVideoStream->r_frame_rate.den);
+				sprintf_s(buf, "%.2f fps", pVideoStream->r_frame_rate.num/(double)pVideoStream->r_frame_rate.den);
 				SetDlgItemText(mhdlg, IDC_VIDEO_FRAMERATE, buf);
 
 				if ( pVideoCtx->bit_rate )
 				{
-					sprintf(buf, "%u kb/sec", pVideoCtx->bit_rate/1000);
+					sprintf_s(buf, "%u kb/sec", pVideoCtx->bit_rate/1000);
 					SetDlgItemText(mhdlg, IDC_VIDEO_BITRATE, buf);
 
 				}
@@ -2316,10 +2303,10 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 
 				SetDlgItemText(mhdlg, IDC_AUDIO_CODECNAME, codec_name);
 
-				sprintf(buf, "%u Hz", pAudioCtx->sample_rate);
+				sprintf_s(buf, "%u Hz", pAudioCtx->sample_rate);
 				SetDlgItemText(mhdlg, IDC_AUDIO_SAMPLERATE, buf);
 
-				sprintf(buf, "%u", pAudioCtx->channels);
+				sprintf_s(buf, "%u", pAudioCtx->channels);
 				SetDlgItemText(mhdlg, IDC_AUDIO_CHANNELS, buf);
 
 				if (pAudioCtx->sample_fmt != AV_SAMPLE_FMT_NONE) 
@@ -2338,7 +2325,7 @@ INT_PTR VDFFInputFileInfoDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lParam)
 				int bit_rate = bits_per_sample ? pAudioCtx->sample_rate * pAudioCtx->channels * bits_per_sample : pAudioCtx->bit_rate;
 				if ( bit_rate )
 				{
-					sprintf(buf, "%u kb/sec", bit_rate/1000);
+					sprintf_s(buf, "%u kb/sec", bit_rate/1000);
 					SetDlgItemText(mhdlg, IDC_AUDIO_BITRATE, buf);
 
 				}
@@ -2425,7 +2412,7 @@ INT_PTR VDFFInputFileOptionsDialog::DlgProc(UINT msg, WPARAM wParam, LPARAM lPar
 				{
 					HWND hwnd = GetDlgItem(mhdlg, IDC_VIDEO_ADJUSTPAR);
 
-					int state = SendMessage(hwnd,BM_GETCHECK,0,0);
+					LRESULT state = SendMessage(hwnd,BM_GETCHECK,0,0);
 					
 					m_pOpts->bAdjustPAR = 0;
 					if(state == BST_CHECKED && m_pOpts) 

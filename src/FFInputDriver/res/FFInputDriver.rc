@@ -25,15 +25,15 @@ LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,6,0,1
- PRODUCTVERSION 1,6,0,1
+ FILEVERSION 1,7,0,1
+ PRODUCTVERSION 1,7,0,1
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
 #else
  FILEFLAGS 0x0L
 #endif
- FILEOS 0x40004L
+ FILEOS 0x40000L
  FILETYPE 0x3L
  FILESUBTYPE 0xbL
 BEGIN
@@ -43,12 +43,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Andrey Kovalchuk"
             VALUE "FileDescription", "VirtualDub FFMpeg Input Plugin"
-            VALUE "FileVersion", "1.6.0.1"
+            VALUE "FileVersion", "1.7.0.1"
             VALUE "InternalName", "FFInputDriver.dll"
-            VALUE "LegalCopyright", "Copyright (C) 2011,  Andrey Kovalchuk"
+            VALUE "LegalCopyright", "2012,  Andrey Kovalchuk"
             VALUE "OriginalFilename", "FFInputDriver.vdplugin"
             VALUE "ProductName", "FFInputDriver"
-            VALUE "ProductVersion", "1.6.0.1"
+            VALUE "ProductVersion", "1.7.0.1"
         END
     END
     BLOCK "VarFileInfo"

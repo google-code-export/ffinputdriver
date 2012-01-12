@@ -26,17 +26,16 @@ BOOLEAN WINAPI DllMain( IN HINSTANCE hDllHandle,
 {
 	BOOLEAN bSuccess = TRUE;
 
-	LPTSTR  strModulePath = new TCHAR[_MAX_PATH];
+	TCHAR strModulePath[_MAX_PATH];
 	::GetModuleFileName(hDllHandle, strModulePath, _MAX_PATH);
 
-	int strLen =  _tcslen(strModulePath);
+	int64 strLen =  _tcslen(strModulePath);
 	while( --strLen > 0 && strModulePath[strLen] != L'/' && strModulePath[strLen] != L'\\' );
 	
 	strModulePath[strLen + 1] = 0;
 
-	_tcscat(strModulePath, "ffdlls");
-
-
+	_tcscat_s(strModulePath, "ffdlls");
+	
 	//  Perform global initialization.
 
 	switch ( nReason )
